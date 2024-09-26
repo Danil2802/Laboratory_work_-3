@@ -1,0 +1,119 @@
+import java.util.Scanner;
+import java.util.Locale;
+
+public class Main {
+    // Определение функции
+    public static double f(double x) {
+        if (x >= -7.0 && x <= -6) {
+            return 1;
+        } else if (x > -6 && x <= -4) {
+            return -x / 2 - 2;
+        } else if (x > -4 && x <= 0) {
+            return Math.sqrt(4 - Math.pow(x + 2, 2));
+        } else if (x > 0 && x <= 2) {
+            return -Math.sqrt(1 - Math.pow(x - 1, 2));
+        } else if (x > 2 && x <= 3) {
+            return -x + 2;
+        } else {
+            return 0; // Вне интервала
+        }
+    }
+
+    // Функция для ввода одного слова с проверкой
+    public static double getSingleWordInput(String prompt) {
+        Scanner scanner = new Scanner(System.in);
+        double value;
+
+        while (true) {
+            System.out.print(prompt);
+            String input = scanner.nextLine();
+
+            // Проверка на количество слов
+            String[] words = input.trim().split("\\s+");
+            if (words.length != 1) {
+                System.out.println("Неправильное количество слов. Пожалуйста, введите одно число.");
+                continue;
+            }
+
+            // Проверка на корректность числа
+            boolean valid = true;
+            boolean hasDot = false;
+            for (int i = 0; i < input.length(); i++) {
+                char c = input.charAt(i);
+
+                if (i == 0) {
+                    // Первый символ может быть '-' или цифрой, но не '0' (если нет знака '-')
+                    if (c == '-') {
+                        if (input.length() == 1 || !Character.isDigit(input.charAt(1))) {
+                            valid = false;
+                            break;
+                        }
+                    } else if (c == '0' && input.length() > 1 && input.charAt(1) != '.') {
+                        valid = false;
+                        break;
+                    } else if (!Character.isDigit(c)) {
+                        valid = false;
+                        break;
+                    }
+                } else {
+                    // Остальные символы могут быть цифрами, точкой (одна), но '-' недопустим
+                    if (c == '.') {
+                        if (hasDot || i == input.length() - 1) {
+                            valid = false;
+                            break;
+                        }
+                        hasDot = true;
+                    } else if (!Character.isDigit(c)) {
+                        valid = false;
+                        break;
+                    }
+                }
+            }
+
+            if (!valid) {
+                System.out.println("Некорректное число. Попробуйте снова.");
+                continue;
+            }
+
+            try {
+                value = Double.parseDouble(input);
+                return value;
+            } catch (NumberFormatException e) {
+                System.out.println("Некорректное число. Попробуйте снова.");
+            }
+        }
+    }
+
+    public static void main(String[] args) {
+        Locale.setDefault(new Locale("ru", "RU"));
+
+        double Xнач, Xкон, dx;
+
+        while (true) {
+            // Ввод значений с проверкой на количество слов и корректность числа
+            Xнач = getSingleWordInput("Введите начальное значение X: ");
+            Xкон = getSingleWordInput("Введите конечное значение X: ");
+            dx = getSingleWordInput("Введите шаг dx: ");
+
+            // Проверка на корректность введенных значений
+            if (Xкон <= Xнач) {
+                System.out.println("Некорректные значения: конечное значение X должно быть больше начального значения.");
+                continue;
+            }
+            if (dx <= 0 || dx >= Xкон - Xнач) {
+                System.out.println("Некорректное значение шага dx");
+                continue;
+            }
+
+            break; // Если проверки пройдены, выходим из цикла
+        }
+
+        // Заголовок таблицы
+        System.out.printf("%7s%13s%n", "x", "f(x)");
+
+        // Вычисление и вывод значений функции
+        for (double x = Xнач; x <= Xкон; x += dx) {
+            System.out.printf("%10.2f%10.2f%n", x, f(x));
+        }
+    }
+}
