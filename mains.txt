@@ -1,0 +1,293 @@
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
+
+public class PrimeNumberGenerator {
+
+    private static final Random random = new Random();
+
+    // Функция для генерации случайного числа в заданном диапазоне
+    public static int randomGenerator(int min, int max) {
+        return random.nextInt(max - min + 1) + min;
+    }
+
+    // Простая функция для проверки простоты числа
+    public static boolean isPrime(int number, List<Integer> primes) {
+        for (int prime : primes) {
+            if (number % prime == 0) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    // Проверка числа на простоту через решето Эратосфена
+    public static List<Integer> eratosthenesSieve(int limit) {
+        List<Integer> primes = new ArrayList<>();
+        primes.add(2);
+        for (int i = 3; i < limit; i += 2) {
+            if (isPrime(i, primes)) {
+                primes.add(i);
+            }
+        }
+        return primes;
+    }
+
+    // Функция для модульного возведения в степень
+    public static long mod(long number, long power, long n) {
+        long result = 1;
+        while (power > 0) {
+            if (power % 2 != 0) {
+                result = (result * number) % n;
+            }
+            power /= 2;
+            number = (number * number) % n;
+        }
+        return result;
+    }
+
+    // Функция для проверки теоремы Ферма
+    public static boolean fermatTheorem(int a, int x, int p) {
+        return mod(a, x, p) == 1;
+    }
+
+    // Тест Поклингтона на простоту
+    public static boolean poklingtonTest(long n, List<Integer> factors, int t) {
+        for (int i = 0; i < t; i++) {
+            int aj = randomGenerator(2, (int) n - 1);
+            if (!fermatTheorem(aj, (int) n - 1, (int) n)) {
+                return false; // n - составное число
+            }
+
+            boolean found = false;
+            for (int qj : factors) {
+                if (fermatTheorem(aj, (int) ((n - 1) / qj), (int) n)) {
+                    found = true;
+                    break;
+                }
+            }
+
+            if (!found) {
+                return true; // n - простое число
+            }
+        }
+        return false; // вероятно, n - составное число
+    }
+
+    // Функция для вычисления количества бит в числе
+    public static int countBits(long number) {
+        return Long.SIZE - Long.numberOfLeadingZeros(number);
+    }
+
+    // Функция для проверки, является ли число меньше или больше заданного количества бит
+    public static int isWithinBitRange(long number, int bitCount, int formin) {
+        int numBits = countBits(number);
+        if (numBits < bitCount - 1) return 1; // Число меньше заданного количества бит
+        if (numBits > bitCount - formin) return 2; // Число больше заданного количества бит
+        return 3; // Число равно заданному количеству бит
+    }
+
+    // Функция для создания числа и проведения тестов
+    public static boolean createNum(int k, List<Integer> numbers, List<String> plusminus, List<Integer> oshibki, List<Double> errorProbabilities, List<Integer> primes, AtomicBoolean shouldStop) {
+        List<Integer> q = new ArrayList<>(); // Вектор для хранения простых множителей
+        long f = 1;
+        long tempf = 1;
+        int qi; // Переменная для хранения индекса случайного простого числа
+        int ai; // Переменная для хранения случайного целого числа
+        long n;
+        int targetBitCountF = (k / 2) + 1; // Целевое количество бит для числа F
+        int targetBitCountR = targetBitCountF - 1; // Целевое количество бит для числа R
+        int tempOshibki = 0;
+        int formin = 1;
+        long r;
+        if (k < 8) {
+            formin = 0;
+        }
+
+        while (!shouldStop.get()) { // генерация числа f в заданном диапазоне битов
+            qi = primes.get(randomGenerator(0, primes.size() / 10)); // Выбор случайного простого числа из таблицы
+            ai = randomGenerator(1, 12);
+            tempf *= Math.pow(qi, ai); // Умножение текущего значения tempf на qi в степени ai
+            if (isWithinBitRange(tempf, targetBitCountF, formin) == 2) { // Проверка, не превышает ли tempf максимальное значение для k битов
+                f = 1;
+                tempf = 1;
+                q.clear();
+            } else if (isWithinBitRange(tempf, targetBitCountF, formin) == 1) { // Если tempf меньше минимального значения для k битов, продолжаем генерировать
+                q.add(qi); // Добавляем qi в вектор q
+            } else {
+                f = tempf;
+                q.add(qi);
+                do {
+                    r = randomGenerator(1, 30) * 2; // Генерация четного числа
+                } while (isWithinBitRange(r, targetBitCountR, formin) != 3); // Убеждаемся, что r на 1 бит меньше f
+                n = r * f + 1;
+                if (poklingtonTest(n, q, 1)) {
+                    break;
+                } else {
+                    tempOshibki++;
+                    f = 1;
+                    tempf = 1;
+                    n = 0;
+                    q.clear();
+                }
+            }
+        }
+        if (shouldStop.get()) return false;
+
+        // Проверка на уникальность числа и повторная генерация, если число уже существует
+        while (!numbers.isEmpty() && numbers.contains((int) n)) {
+            // Генерация нового числа f и n
+            f = 1;
+            tempf = 1;
+            q.clear();
+            while (!shouldStop.get()) { // генерация числа f в заданном диапазоне битов
+                qi = primes.get(randomGenerator(0, primes.size() / 10)); // генерация индекса случайных простых чисел
+                ai = randomGenerator(1, 12); // генерация случайных целых чисел
+                tempf *= Math.pow(qi, ai);
+                if (isWithinBitRange(tempf, targetBitCountF, formin) == 2) {
+                    f = 1;
+                    tempf = 1;
+                    q.clear();
+                } else if (isWithinBitRange(tempf, targetBitCountF, formin) == 1) {
+                    q.add(qi);
+                } else {
+                    f = tempf;
+                    q.add(qi);
+                    do {
+                        r = randomGenerator(1, 30) * 2; // Генерация четного числа
+                    } while (isWithinBitRange(r, targetBitCountR, formin) != 3); // Убеждаемся, что r на 1 бит меньше f
+                    n = r * f + 1;
+                    if (poklingtonTest(n, q, 1)) {
+                        break;
+                    } else {
+                        tempOshibki++;
+                        f = 1;
+                        tempf = 1;
+                        n = 0;
+                        q.clear();
+                    }
+                }
+            }
+            if (shouldStop.get()) return false;
+        }
+        if (shouldStop.get()) return false;
+
+        int tempOshibki2 = 0;
+        int i;
+        int iter = 1;
+        while (!shouldStop.get()) {
+            // Проверяем n на простоту с помощью теста Миллера
+            for (i = 0; i < 100; i++) {
+                if (!poklingtonTest(n, q, iter)) {
+                    tempOshibki2++;
+                }
+            }
+            if (tempOshibki2 <= i / 10) {
+                break;
+            } else {
+                tempOshibki2 = 0;
+                iter++;
+            }
+        }
+        if (shouldStop.get()) return false;
+
+        if (tempOshibki2 <= i / 10) {
+            plusminus.add("+");
+        } else {
+            plusminus.add("-");
+        }
+        numbers.add((int) n);
+        oshibki.add(tempOshibki);
+
+        double veroatnost = 1.0;
+        for (int qj : q) {
+            veroatnost = veroatnost * (1.0 / qj);
+        }
+        errorProbabilities.add(veroatnost); // Вычисление вероятности ошибки
+        return true; // Число успешно добавлено
+    }
+
+    // Функция для ввода одного слова с проверкой
+    public static int getSingleWordInput(String prompt) {
+        Scanner scanner = new Scanner(System.in);
+        while (true) {
+            System.out.print(prompt);
+            String input = scanner.nextLine();
+
+            // Проверка на количество слов
+            if (input.split("\\s+").length != 1) {
+                System.out.println("Неправильное количество. Пожалуйста, введите одно число.");
+                continue;
+            }
+
+            // Проверка на корректность числа
+            try {
+                int value = Integer.parseInt(input);
+                if (value <= 3 || value > 13) {
+                    System.out.println("Некорректное число. Попробуйте снова.");
+                    continue;
+                }
+                return value;
+            } catch (NumberFormatException e) {
+                System.out.println("Некорректное число. Попробуйте снова.");
+            }
+        }
+    }
+
+    public static void main(String[] args) {
+        List<Integer> numbers = new ArrayList<>();
+        List<String> plusminus = new ArrayList<>();
+        List<Integer> oshibki = new ArrayList<>();
+        List<Double> errorProbabilities = new ArrayList<>(); // Вектор для хранения вероятностей ошибок
+        int length = 0;
+        int input;
+
+        while (true) {
+            // Ввод значений с проверкой на количество слов и корректность числа
+            input = getSingleWordInput("Введите размерность простого числа \n");
+            break; // Если проверки пройдены, выходим из цикла
+        }
+
+        length = input;
+
+        // Вывод результатов метода Эратосфена
+        List<Integer> primes = eratosthenesSieve(500);
+        System.out.println("Простые числа до 500 (Решето Эратосфена):");
+        System.out.println(primes.stream().map(Object::toString).collect(Collectors.joining(" ")));
+        System.out.println();
+
+        int i = 0;
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        while (i < 10) {
+            AtomicBoolean shouldStop = new AtomicBoolean(false);
+            Future<Boolean> future = executor.submit(() -> createNum(length, numbers, plusminus, oshibki, errorProbabilities, primes, shouldStop));
+
+            try {
+                Thread.sleep(10);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+            shouldStop.set(true);
+            try {
+                if (future.get()) {
+                    i++;
+                }
+            } catch (InterruptedException | ExecutionException e) {
+                e.printStackTrace();
+            }
+        }
+        executor.shutdown();
+
+        System.out.println("| Num | " + String.format("%5d | %5d | %5d | %5d | %5d | %5d | %5d | %5d | %5d | %5d |", 1, 2, 3, 4, 5, 6, 7, 8, 9, 10));
+        System.out.println(" ");
+        System.out.println("|  P  | " + String.format("%5d | %5d | %5d | %5d | %5d | %5d | %5d | %5d | %5d | %5d |", numbers.toArray()));
+        System.out.println(" ");
+        System.out.println("| Res | " + String.format("%5s | %5s | %5s | %5s | %5s | %5s | %5s | %5s | %5s | %5s |", plusminus.toArray()));
+        System.out.println(" ");
+        System.out.println("|  K  | " + String.format("%5d | %5d | %5d | %5d | %5d | %5d | %5d | %5d | %5d | %5d |", oshibki.toArray()));
+        System.out.println(" ");
+        System.out.println("| Err | " + String.format("%5.3f | %5.3f | %5.3f | %5.3f | %5.3f | %5.3f | %5.3f | %5.3f | %5.3f | %5.3f |", errorProbabilities.toArray()));
+    }
+}
