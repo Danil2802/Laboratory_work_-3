@@ -1,0 +1,119 @@
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Scanner;
+
+public class CoffeeTemperature {
+
+    private static double Temp;
+    private static double EnvT;
+    private static double CoolC;
+    private static int time_limit;
+    private static List<Double> apox_vector;
+
+    // Функция, которая вычисляет коэффициент корреляции.
+    private static double korrel(List<Double> temperatures, double mean_y) {
+        double sum_xy = 0, sum_x2 = 0, sum_y2 = 0;
+        double mean_x = (time_limit - 1) / 2.0;
+        for (int i = 0; i < temperatures.size(); i++) {
+            sum_xy += (i - mean_x) * (temperatures.get(i) - mean_y);
+            sum_x2 += (i - mean_x) * (i - mean_x);
+            sum_y2 += (temperatures.get(i) - mean_y) * (temperatures.get(i) - mean_y);
+        }
+        return sum_xy / Math.sqrt(sum_x2 * sum_y2);
+    }
+
+    // Функция, которая вычисляет коэффициенты линейной аппроксимации для векторов температур и времени.
+    private static Pair<Double, Double> aprox(List<Double> x_vector, List<Double> y_vector) {
+        double sum_x = 0, sum_y = 0, sum_xy = 0, sum_x2 = 0;
+        int n = x_vector.size();
+
+        for (int i = 0; i < n; i++) {
+            sum_x += x_vector.get(i);
+            sum_y += y_vector.get(i);
+            sum_xy += x_vector.get(i) * y_vector.get(i);
+            sum_x2 += x_vector.get(i) * x_vector.get(i);
+        }
+
+        double a = (n * sum_xy - sum_x * sum_y) / (n * sum_x2 - sum_x * sum_x);
+        double b = (sum_y - a * sum_x) / n;
+
+        return new Pair<>(a, b);
+    }
+
+    // Функция кофе, которая вычисляет температуру кофе в зависимости от времени, используя заданные коэффициенты.
+    private static List<Pair<Double, Double>> coffee(double Temp, double EnvT, double CoolC, int time_limit) {
+        List<Double> temperatures = new ArrayList<>();
+        List<Double> times = new ArrayList<>();
+        List<Pair<Double, Double>> temp_corr = new ArrayList<>();
+
+        for (int t = 0; t <= time_limit; t++) {
+            double temperature = EnvT + (Temp - EnvT) * Math.exp(-CoolC * t);
+            temperatures.add(temperature);
+            times.add((double) t);
+        }
+
+        Pair<Double, Double> aprox_coeffs = aprox(times, temperatures);
+        double a = aprox_coeffs.getFirst();
+        double b = aprox_coeffs.getSecond();
+
+        apox_vector = new ArrayList<>();
+        apox_vector.add(a);
+        apox_vector.add(b);
+
+        double mean_y = temperatures.stream().mapToDouble(Double::doubleValue).average().orElse(0.0);
+        double corr = korrel(temperatures, mean_y);
+        for (int t = 0; t <= time_limit; t++) {
+            temp_corr.add(new Pair<>(temperatures.get(t), corr));
+        }
+
+        return temp_corr;
+    }
+
+    // Ввод и вывод параметров.
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+
+        System.out.print("Enter start coffee temperature(Celsius): ");
+        Temp = scanner.nextDouble();
+        System.out.print("Enter temperature of environment(Celsius): ");
+        EnvT = scanner.nextDouble();
+        System.out.print("Enter cooling coefficient(dC): ");
+        CoolC = scanner.nextDouble();
+        System.out.print("Enter time of full cool(Seconds): ");
+        time_limit = scanner.nextInt();
+
+        List<Pair<Double, Double>> results = coffee(Temp, EnvT, CoolC, time_limit);
+
+        System.out.println("Coefficients of the approximating line a - " + apox_vector.get(0) + ", b - " + apox_vector.get(1));
+        System.out.println("|------|------------|---------------|");
+        System.out.println("| Time | Temperature|CorrelationCoef|");
+        System.out.println("|------|------------|---------------|");
+
+        int t = 0;
+
+        for (Pair<Double, Double> result : results) {
+            System.out.printf("|%6d|%12.2f|%15.2f|\n", t, result.getFirst(), result.getSecond());
+            t++;
+            System.out.println("|------|------------|---------------|");
+        }
+    }
+
+    // Вспомогательный класс для хранения пар значений.
+    private static class Pair<T, U> {
+        private final T first;
+        private final U second;
+
+        public Pair(T first, U second) {
+            this.first = first;
+            this.second = second;
+        }
+
+        public T getFirst() {
+            return first;
+        }
+
+        public U getSecond() {
+            return second;
+        }
+    }
+}
