@@ -83,8 +83,8 @@ public class PrimeNumberGenerator {
     // Функция для проверки, является ли число меньше или больше заданного количества бит
     public static int isWithinBitRange(long number, int bitCount, int formin) {
         int numBits = countBits(number);
-        if (numBits < bitCount - 1) return 1; // Число меньше заданного количества бит
-        if (numBits > bitCount - formin) return 2; // Число больше заданного количества бит
+        if (numBits < bitCount ) return 1; // Число меньше заданного количества бит
+        if (numBits > bitCount + formin) return 2; // Число больше заданного количества бит
         return 3; // Число равно заданному количеству бит
     }
 
@@ -95,16 +95,16 @@ public class PrimeNumberGenerator {
         long tempf = 1;
         int qi; // Переменная для хранения индекса случайного простого числа
         int ai; // Переменная для хранения случайного целого числа
-        long n;
+        long n = 0; // Инициализация переменной n
         int targetBitCountF = (k / 2) + 1; // Целевое количество бит для числа F
         int targetBitCountR = targetBitCountF - 1; // Целевое количество бит для числа R
         int tempOshibki = 0;
-        int formin = 1;
+        int formin = 0;
         long r;
         if (k < 8) {
-            formin = 0;
+            formin = 1;
         }
-
+        
         while (!shouldStop.get()) { // генерация числа f в заданном диапазоне битов
             qi = primes.get(randomGenerator(0, primes.size() / 10)); // Выбор случайного простого числа из таблицы
             ai = randomGenerator(1, 12);
@@ -174,7 +174,7 @@ public class PrimeNumberGenerator {
         if (shouldStop.get()) return false;
 
         int tempOshibki2 = 0;
-        int i;
+        int i = 0; // Инициализация переменной i
         int iter = 1;
         while (!shouldStop.get()) {
             // Проверяем n на простоту с помощью теста Миллера
@@ -261,7 +261,14 @@ public class PrimeNumberGenerator {
         ExecutorService executor = Executors.newSingleThreadExecutor();
         while (i < 10) {
             AtomicBoolean shouldStop = new AtomicBoolean(false);
-            Future<Boolean> future = executor.submit(() -> createNum(length, numbers, plusminus, oshibki, errorProbabilities, primes, shouldStop));
+            int finalLength = length; // Создаем локальную копию length
+            List<Integer> finalNumbers = new ArrayList<>(numbers); // Создаем локальную копию numbers
+            List<String> finalPlusminus = new ArrayList<>(plusminus); // Создаем локальную копию plusminus
+            List<Integer> finalOshibki = new ArrayList<>(oshibki); // Создаем локальную копию oshibki
+            List<Double> finalErrorProbabilities = new ArrayList<>(errorProbabilities); // Создаем локальную копию errorProbabilities
+            List<Integer> finalPrimes = new ArrayList<>(primes); // Создаем локальную копию primes
+
+            Future<Boolean> future = executor.submit(() -> createNum(finalLength, finalNumbers, finalPlusminus, finalOshibki, finalErrorProbabilities, finalPrimes, shouldStop));
 
             try {
                 Thread.sleep(10);
@@ -273,6 +280,10 @@ public class PrimeNumberGenerator {
             try {
                 if (future.get()) {
                     i++;
+                    numbers = finalNumbers; // Обновляем оригинальные списки
+                    plusminus = finalPlusminus;
+                    oshibki = finalOshibki;
+                    errorProbabilities = finalErrorProbabilities;
                 }
             } catch (InterruptedException | ExecutionException e) {
                 e.printStackTrace();
@@ -280,6 +291,8 @@ public class PrimeNumberGenerator {
         }
         executor.shutdown();
 
+        // Добавляем фразу перед выводом 10 чисел
+        System.out.println("Простые числа, созданные с помощью теста Поклингтона:");
         System.out.println("| Num | " + String.format("%5d | %5d | %5d | %5d | %5d | %5d | %5d | %5d | %5d | %5d |", 1, 2, 3, 4, 5, 6, 7, 8, 9, 10));
         System.out.println(" ");
         System.out.println("|  P  | " + String.format("%5d | %5d | %5d | %5d | %5d | %5d | %5d | %5d | %5d | %5d |", numbers.toArray()));
